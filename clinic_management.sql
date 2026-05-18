@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 18, 2026 at 04:01 AM
+-- Generation Time: May 18, 2026 at 05:35 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -31,11 +31,9 @@ CREATE TABLE `appointments` (
   `appointment_id` int(11) NOT NULL,
   `patient_id` int(11) DEFAULT NULL,
   `doctor_id` int(11) DEFAULT NULL,
-  `appointment_date` date DEFAULT NULL,
-  `appointment_time` time DEFAULT NULL,
-  `status` varchar(20) DEFAULT 'Pending',
-  `laboratory_required` varchar(10) DEFAULT 'No',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `appointment_date` datetime DEFAULT NULL,
+  `laboratory_required` text DEFAULT NULL,
+  `status` enum('Pending','Approved','Completed','Cancelled') DEFAULT 'Pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -46,11 +44,20 @@ CREATE TABLE `appointments` (
 
 CREATE TABLE `doctors` (
   `doctor_id` int(11) NOT NULL,
-  `doctor_name` varchar(100) DEFAULT NULL,
-  `specialization` varchar(100) DEFAULT NULL,
-  `schedule` varchar(100) DEFAULT NULL,
-  `max_patients` int(11) DEFAULT 20
+  `doctor_name` varchar(100) NOT NULL,
+  `specialization` varchar(50) DEFAULT NULL,
+  `schedule` text DEFAULT NULL,
+  `max_patients` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `doctors`
+--
+
+INSERT INTO `doctors` (`doctor_id`, `doctor_name`, `specialization`, `schedule`, `max_patients`) VALUES
+(1, 'Dr. Maria Santos', 'General Physician', 'Monday – Wednesday 8:00 AM – 2:00 PM', 15),
+(2, 'Dr. John Reyes', 'Cardiologist', 'Tuesday – Thursday 1:00 PM – 7:00 PM', 10),
+(3, 'Dr. Angela Cruz', 'Radiologist', 'Friday – Saturday 9:00 AM – 5:00 PM', 12);
 
 -- --------------------------------------------------------
 
@@ -60,21 +67,11 @@ CREATE TABLE `doctors` (
 
 CREATE TABLE `laboratory` (
   `lab_id` int(11) NOT NULL,
-  `patient_id` int(11) NOT NULL,
-  `laboratory_type` varchar(100) DEFAULT NULL,
-  `status` varchar(50) DEFAULT 'Not Yet Taken',
+  `patient_id` int(11) DEFAULT NULL,
+  `laboratory_type` varchar(50) DEFAULT NULL,
   `result` text DEFAULT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `status` enum('Not Yet Taken','Ongoing','Completed') DEFAULT 'Not Yet Taken'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `laboratory`
---
-
-INSERT INTO `laboratory` (`lab_id`, `patient_id`, `laboratory_type`, `status`, `result`, `created_at`) VALUES
-(4, 1, 'X-ray', 'Ongoing', 'dadasd', '2026-05-18 01:54:18'),
-(5, 2, 'CBC', 'Not Yet Taken', 'cant test', '2026-05-18 01:58:26'),
-(6, 2, 'X-ray', 'Completed', '', '2026-05-18 02:00:29');
 
 -- --------------------------------------------------------
 
@@ -84,10 +81,12 @@ INSERT INTO `laboratory` (`lab_id`, `patient_id`, `laboratory_type`, `status`, `
 
 CREATE TABLE `medicines` (
   `medicine_id` int(11) NOT NULL,
-  `patient_id` int(11) NOT NULL,
+  `patient_id` int(11) DEFAULT NULL,
   `medicine_name` varchar(100) DEFAULT NULL,
-  `quantity` int(11) DEFAULT 1,
-  `date_given` timestamp NOT NULL DEFAULT current_timestamp()
+  `dosage` varchar(50) DEFAULT NULL,
+  `frequency` varchar(50) DEFAULT NULL,
+  `duration` varchar(50) DEFAULT NULL,
+  `prescription_date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -98,21 +97,13 @@ CREATE TABLE `medicines` (
 
 CREATE TABLE `patients` (
   `patient_id` int(11) NOT NULL,
-  `fullname` varchar(100) DEFAULT NULL,
+  `fullname` varchar(100) NOT NULL,
   `age` int(11) DEFAULT NULL,
   `gender` varchar(10) DEFAULT NULL,
   `address` text DEFAULT NULL,
-  `contact_number` varchar(15) DEFAULT NULL,
+  `contact_number` varchar(20) DEFAULT NULL,
   `date_registered` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `patients`
---
-
-INSERT INTO `patients` (`patient_id`, `fullname`, `age`, `gender`, `address`, `contact_number`, `date_registered`) VALUES
-(1, 'luigi', 19, 'Male', 'bacoor', '1222222223', '2026-05-18 01:52:40'),
-(2, '2', 14, 'Male', 'imus', '1234433333', '2026-05-18 01:57:46');
 
 -- --------------------------------------------------------
 
@@ -123,19 +114,11 @@ INSERT INTO `patients` (`patient_id`, `fullname`, `age`, `gender`, `address`, `c
 CREATE TABLE `payments` (
   `payment_id` int(11) NOT NULL,
   `patient_id` int(11) DEFAULT NULL,
-  `consultation_fee` decimal(10,2) DEFAULT NULL,
-  `laboratory_fee` decimal(10,2) DEFAULT NULL,
+  `consultation_fee` decimal(10,2) DEFAULT 500.00,
+  `laboratory_fee` decimal(10,2) DEFAULT 0.00,
   `total_amount` decimal(10,2) DEFAULT NULL,
-  `payment_status` varchar(20) DEFAULT 'Unpaid'
+  `payment_status` enum('Paid','Unpaid','Partial') DEFAULT 'Unpaid'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `payments`
---
-
-INSERT INTO `payments` (`payment_id`, `patient_id`, `consultation_fee`, `laboratory_fee`, `total_amount`, `payment_status`) VALUES
-(1, 1, NULL, NULL, NULL, 'Paid'),
-(2, 2, NULL, NULL, NULL, 'Unpaid');
 
 --
 -- Indexes for dumped tables
@@ -145,7 +128,9 @@ INSERT INTO `payments` (`payment_id`, `patient_id`, `consultation_fee`, `laborat
 -- Indexes for table `appointments`
 --
 ALTER TABLE `appointments`
-  ADD PRIMARY KEY (`appointment_id`);
+  ADD PRIMARY KEY (`appointment_id`),
+  ADD KEY `patient_id` (`patient_id`),
+  ADD KEY `doctor_id` (`doctor_id`);
 
 --
 -- Indexes for table `doctors`
@@ -177,7 +162,8 @@ ALTER TABLE `patients`
 -- Indexes for table `payments`
 --
 ALTER TABLE `payments`
-  ADD PRIMARY KEY (`payment_id`);
+  ADD PRIMARY KEY (`payment_id`),
+  ADD KEY `patient_id` (`patient_id`);
 
 --
 -- AUTO_INCREMENT for dumped tables
@@ -193,13 +179,13 @@ ALTER TABLE `appointments`
 -- AUTO_INCREMENT for table `doctors`
 --
 ALTER TABLE `doctors`
-  MODIFY `doctor_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `doctor_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `laboratory`
 --
 ALTER TABLE `laboratory`
-  MODIFY `lab_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `lab_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `medicines`
@@ -211,17 +197,24 @@ ALTER TABLE `medicines`
 -- AUTO_INCREMENT for table `patients`
 --
 ALTER TABLE `patients`
-  MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `patient_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- Constraints for dumped tables
 --
+
+--
+-- Constraints for table `appointments`
+--
+ALTER TABLE `appointments`
+  ADD CONSTRAINT `appointments_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`),
+  ADD CONSTRAINT `appointments_ibfk_2` FOREIGN KEY (`doctor_id`) REFERENCES `doctors` (`doctor_id`);
 
 --
 -- Constraints for table `laboratory`
@@ -234,6 +227,12 @@ ALTER TABLE `laboratory`
 --
 ALTER TABLE `medicines`
   ADD CONSTRAINT `medicines_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`);
+
+--
+-- Constraints for table `payments`
+--
+ALTER TABLE `payments`
+  ADD CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`patient_id`);
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
