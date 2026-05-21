@@ -6,7 +6,6 @@ if (isset($_GET['doctor_id']) && isset($_GET['date'])) {
     $doctor_id = $_GET['doctor_id'];
     $date = $_GET['date'];
     
-    // Get doctor's max patients per day
     $stmt = $pdo->prepare("SELECT max_patients FROM doctors WHERE doctor_id = ?");
     $stmt->execute([$doctor_id]);
     $doctor = $stmt->fetch();
@@ -18,7 +17,6 @@ if (isset($_GET['doctor_id']) && isset($_GET['date'])) {
     
     $max_patients = $doctor['max_patients'];
     
-    // Count appointments for this doctor on this date
     $stmt = $pdo->prepare("
         SELECT COUNT(*) as count 
         FROM appointments 
