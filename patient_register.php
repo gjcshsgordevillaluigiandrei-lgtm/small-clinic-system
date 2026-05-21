@@ -12,7 +12,6 @@ if ($_POST) {
     $result = $stmt->execute([$fullname, $age, $gender, $address, $contact_number]);
     
     if ($result) {
-        // Create default payment record
         $patient_id = $pdo->lastInsertId();
         $stmt = $pdo->prepare("INSERT INTO payments (patient_id, total_amount) VALUES (?, 500.00)");
         $stmt->execute([$patient_id]);
