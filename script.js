@@ -74,3 +74,20 @@ function checkAvailability() {
             bookBtn.disabled = true;
         });
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const form = document.querySelector("form");
+
+    form.addEventListener("submit", function (e) {
+
+        const patientId = document.querySelector("input[name='patient_id']").value;
+
+        if (patientId <= 0) {
+            e.preventDefault();
+            alert("Invalid Patient ID!");
+        }
+
+    });
+
+});
