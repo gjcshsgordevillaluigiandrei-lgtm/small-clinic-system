@@ -25,7 +25,7 @@ window.addEventListener('click', (e) => {
     }
 });
 
-// Form validation
+// Form validation for all forms
 document.querySelectorAll('form').forEach(form => {
     form.addEventListener('submit', (e) => {
         let isValid = true;
@@ -37,7 +37,6 @@ document.querySelectorAll('form').forEach(form => {
                 field.style.borderColor = '#3498db';
             }
         });
-        
         if (!isValid) {
             e.preventDefault();
             alert('Please fill all required fields');
@@ -45,17 +44,33 @@ document.querySelectorAll('form').forEach(form => {
     });
 });
 
-// Dynamic doctor availability check
-function checkDoctorAvailability(doctorId, date) {
-    // AJAX call to check availability
+// Doctor availability check (called from appointment modal)
+function checkAvailability() {
+    const doctorId = document.getElementById('doctor_select')?.value;
+    const date = document.getElementById('appointment_date')?.value;
+    const statusDiv = document.getElementById('availability-status');
+    const bookBtn = document.getElementById('book-btn');
+    
+    if (!doctorId || !date) {
+        if (statusDiv) statusDiv.innerHTML = '';
+        if (bookBtn) bookBtn.disabled = true;
+        return;
+    }
+    
     fetch(`check_availability.php?doctor_id=${doctorId}&date=${date}`)
         .then(response => response.json())
         .then(data => {
             if (data.available) {
-                document.getElementById('book-btn').disabled = false;
+                statusDiv.innerHTML = `<span style="color:green;">✅ Available! ${data.remaining} slot(s) remaining.</span>`;
+                bookBtn.disabled = false;
             } else {
-                document.getElementById('book-btn').disabled = true;
-                alert('Doctor has reached daily limit');
+                statusDiv.innerHTML = `<span style="color:red;">❌ Not available. Max ${data.max_patients} patients, already ${data.current_count} booked.</span>`;
+                bookBtn.disabled = true;
             }
+        })
+        .catch(error => {
+            console.error('Error checking availability:', error);
+            statusDiv.innerHTML = `<span style="color:red;">Error checking availability.</span>`;
+            bookBtn.disabled = true;
         });
 }
