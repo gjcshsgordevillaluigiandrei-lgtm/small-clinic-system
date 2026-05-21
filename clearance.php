@@ -6,14 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Patient Clearance</title>
     <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1><i class="fas fa-check-circle"></i> Patient Clearance</h1>
+            <h1><i class="fas fa-check-circle"></i> Patient Clearance & Checklist</h1>
             <a href="index.php" class="btn primary">← Back to Dashboard</a>
         </header>
-
         <main>
             <div class="card">
                 <h3>Search Patient for Clearance</h3>
@@ -27,59 +27,60 @@
             </div>
 
             <?php if (isset($_GET['patient_id'])): 
-                $patient_id = $_GET['patient_id'];
+                $patient_id = (int)$_GET['patient_id'];
                 $patient = $pdo->prepare("SELECT * FROM patients WHERE patient_id = ?");
                 $patient->execute([$patient_id]);
                 $patient_data = $patient->fetch();
                 
                 if ($patient_data):
-                    // Check all requirements
-                    $payment = $pdo->prepare("SELECT * FROM payments WHERE patient_id = ?");
-                    $payment->execute([$patient_id]);
-                    $payment_data = $payment->fetch();
-                    
-                    $appointment = $pdo->prepare("SELECT * FROM appointments WHERE patient_id = ? AND status = 'Completed'");
-                    $appointment->execute([$patient_id]);
-                    $has_completed_appointment = $appointment->rowCount() > 0;
-                    
-                    $lab = $pdo->prepare("SELECT * FROM laboratory WHERE patient_id = ? AND status = 'Completed'");
-                    $lab->execute([$patient_id]);
-                    $has_completed_lab = $lab->rowCount() > 0;
-                    
-                    $medicine = $pdo->prepare("SELECT * FROM medicines WHERE patient_id = ?");
-                    $medicine->execute([$patient_id]);
-                    $has_medicine = $medicine->rowCount() > 0;
-                    
-                    $is_cleared = $has_completed_appointment && $has_completed_lab && $has_medicine && $payment_data['payment_status'] == 'Paid';
-            ?>
+                    // Fetch each requirement status
+                    $consult_stmt = $pdo->prepare("SELECT status FROM appointments WHERE patient_id = ? AND status='Completed' LIMIT 1");
+                    $consult_stmt->execute([$patient_id]);
+                    $consult_done = $consult_stmt->rowCount() > 0;
 
+                    $lab_stmt = $pdo->prepare("SELECT status FROM laboratory WHERE patient_id = ? AND status='Completed' LIMIT 1");
+                    $lab_stmt->execute([$patient_id]);
+                    $lab_done = $lab_stmt->rowCount() > 0;
+
+                    $med_stmt = $pdo->prepare("SELECT status FROM medicines WHERE patient_id = ? AND status='Taken' LIMIT 1");
+                    $med_stmt->execute([$patient_id]);
+                    $med_done = $med_stmt->rowCount() > 0;
+
+                    $pay_stmt = $pdo->prepare("SELECT payment_status FROM payments WHERE patient_id = ?");
+                    $pay_stmt->execute([$patient_id]);
+                    $pay = $pay_stmt->fetch();
+                    $pay_done = ($pay && $pay['payment_status'] == 'Paid');
+
+                    $is_cleared = $consult_done && $lab_done && $med_done && $pay_done;
+            ?>
             <div class="card">
-                <h3>Patient: <?php echo $patient_data['fullname']; ?></h3>
+                <h3>Patient: <?php echo htmlspecialchars($patient_data['fullname']); ?> (ID: <?php echo $patient_id; ?>)</h3>
                 
-                <!-- Clearance Checklist -->
+                <!-- Interactive Checklist -->
                 <div class="checklist-section">
+                    <h3><i class="fas fa-clipboard-list"></i> Admin Checklist (Click to toggle)</h3>
                     <div class="checklist-item">
-                        <label>Consultation Done</label>
-                        <input type="checkbox" <?php echo $has_completed_appointment ? 'checked' : ''; ?> disabled>
+                        <label>🩺 Consultation Completed</label>
+                        <input type="checkbox" id="chk_consult" <?php echo $consult_done ? 'checked' : ''; ?> onchange="toggleItem('consult', <?php echo $patient_id; ?>, this.checked)">
                     </div>
                     <div class="checklist-item">
-                        <label>Laboratory Completed</label>
-                        <input type="checkbox" <?php echo $has_completed_lab ? 'checked' : ''; ?> disabled>
+                        <label>🔬 Laboratory Completed</label>
+                        <input type="checkbox" id="chk_lab" <?php echo $lab_done ? 'checked' : ''; ?> onchange="toggleItem('lab', <?php echo $patient_id; ?>, this.checked)">
                     </div>
                     <div class="checklist-item">
-                        <label>Medicine Released</label>
-                        <input type="checkbox" <?php echo $has_medicine ? 'checked' : ''; ?> disabled>
+                        <label>💊 Medicine Taken</label>
+                        <input type="checkbox" id="chk_med" <?php echo $med_done ? 'checked' : ''; ?> onchange="toggleItem('medicine', <?php echo $patient_id; ?>, this.checked)">
                     </div>
                     <div class="checklist-item">
-                        <label>Payment Completed</label>
-                        <input type="checkbox" <?php echo $payment_data['payment_status'] == 'Paid' ? 'checked' : ''; ?> disabled>
+                        <label>💰 Payment Completed</label>
+                        <input type="checkbox" id="chk_pay" <?php echo $pay_done ? 'checked' : ''; ?> onchange="toggleItem('payment', <?php echo $patient_id; ?>, this.checked)">
                     </div>
                 </div>
 
                 <div class="clearance-status">
-                    <h4>Final Status: 
-                        <span class="status <?php echo $is_cleared ? 'completed' : 'pending'; ?>">
-                            <?php echo $is_cleared ? 'CLEARED ✅' : 'NOT CLEARED ❌'; ?>
+                    <h4>Final Clearance Status: 
+                        <span class="status <?php echo $is_cleared ? 'completed' : 'cancelled'; ?>">
+                            <?php echo $is_cleared ? '✅ CLEARED' : '❌ NOT CLEARED'; ?>
                         </span>
                     </h4>
                     <?php if ($is_cleared): ?>
@@ -89,17 +90,22 @@
                     <?php endif; ?>
                 </div>
             </div>
-
             <?php else: ?>
-            <div class="card">
-                <p class="error">Patient ID not found!</p>
-            </div>
+            <div class="card"><p class="error">Patient ID not found!</p></div>
             <?php endif; ?>
             <?php endif; ?>
         </main>
     </div>
 
     <script>
+        function toggleItem(type, patientId, checked) {
+            fetch(`update_clearance_item.php?type=${type}&patient_id=${patientId}&value=${checked}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) location.reload();
+                    else alert('Error updating status');
+                });
+        }
         function printClearance(patientId) {
             window.open(`print_clearance.php?patient_id=${patientId}`, '_blank');
         }
